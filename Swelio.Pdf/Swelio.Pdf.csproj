@@ -36,7 +36,7 @@
     </Reference>
     <Reference Include="Swelio.Engine, Version=1.8.6.1015, Culture=neutral, PublicKeyToken=fcf2f34e19d49d27, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Swelio.1.11.0.00\lib\Swelio.Engine.dll</HintPath>
+      <HintPath>.\Swelio.Engine.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
