@@ -152,7 +152,7 @@ namespace PDFSigner
 
                     try
                     {
-                        AddLtv(tmpSigned, DestinationFile, null, new CrlClientOnline("http://crl.eid.belgium.be/belgium4.crl"), tsaClient);
+                        AddLtv(tmpSigned, DestinationFile, null, new CrlClientOnline(), tsaClient);
                     }
                     catch (Exception e)
                     {
