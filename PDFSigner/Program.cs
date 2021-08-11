@@ -142,6 +142,11 @@ namespace PDFSigner
                             {
                                 MakeSignature.SignDetached(appearance, eidSignature, certPath, crlList, null, tsaClient, 0, CryptoStandard.CADES);
                             }
+                            catch (NullReferenceException e)
+                            {
+                                Console.WriteLine("Can't read the certificate from the card");
+                                return (int)ExitCode.NoCertificate;
+                            }
                             catch (Exception e)
                             {
                                 Console.WriteLine(e.Message);
