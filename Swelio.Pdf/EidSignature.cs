@@ -9,13 +9,13 @@
 using Swelio.Engine;
 using System;
 using System.Collections.Generic;
-using iTextSharp.text.pdf.security;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Digests;
 using Org.BouncyCastle.Pkix;
 using Org.BouncyCastle.X509.Store;
 using System.Security.Cryptography;
 using System.IO;
+using iText.Signatures;
 
 namespace Swelio.Pdf
 {
@@ -27,6 +27,7 @@ namespace Swelio.Pdf
         private string pin;
         private string serialNumber;
         private string cacheFolder;
+        private int appletVersion;
 
 
         public string GetEncryptionAlgorithm()
@@ -153,7 +154,15 @@ namespace Swelio.Pdf
             }
 
             byte[] digest = null;
-            digest = ComputeDigest(new Sha256Digest(), message);
+
+            if (this.appletVersion >= 0x18)
+            {
+                digest = ComputeDigest(new Sha256Digest(), message);
+            }
+            else
+            {
+                digest = ComputeDigest(new Sha256Digest(), message);
+            }
 
             for (int i = 0; i < cnt; i++)
             {
@@ -167,7 +176,8 @@ namespace Swelio.Pdf
                             {
                                 if (card.EidCard)
                                 {
-                                    return Encryption.GenerateNonRepudiationSignature(reader, this.pin, digest, digest.Length);
+                                    var signature = Encryption.GenerateNonRepudiationSignature(reader, this.pin, digest, digest.Length);
+                                    return signature;
                                 }
                             }
                         }
@@ -274,6 +284,7 @@ namespace Swelio.Pdf
                                     {
                                         this.readerIndex = reader.Index;
                                         this.serialNumber = card.SerialNumber;
+                                        this.appletVersion = card.AppletVersion;
                                         return true;
                                     }
                                 }

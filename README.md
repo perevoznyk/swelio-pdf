@@ -8,4 +8,4 @@ External dependencies:
 - Commandline.Arguments library: https://github.com/jpdillingham/Utility.CommandLine.Arguments
 - iTextSharp library: https://github.com/itext/itextsharp
 
-Additionally, TSA time stamp is applied. 
+

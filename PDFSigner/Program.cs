@@ -1,10 +1,11 @@
-﻿using iTextSharp.text.pdf;
-using iTextSharp.text.pdf.security;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using Utility.CommandLine;
 using Swelio.Pdf;
+using iText.Signatures;
+using iText.Kernel.Pdf;
+using Org.BouncyCastle.X509;
 
 namespace PDFSigner
 {
@@ -38,27 +39,7 @@ namespace PDFSigner
             Console.WriteLine("usage: PDFSigner -i input file -o output file -p pincode");
         }
 
-        public static void AddLtv(String src, String dest, IOcspClient ocsp, ICrlClient crl, ITSAClient tsa)
-        {
-            PdfReader r = new PdfReader(src);
-            FileStream fos = new FileStream(dest, FileMode.Create);
-            PdfStamper stp = PdfStamper.CreateSignature(r, fos, '\0', null, true);
-            Dictionary<String, String> info = r.Info;
-            stp.MoreInfo = info;
-            LtvVerification v = stp.LtvVerification;
-            AcroFields fields = stp.AcroFields;
-            List<String> names = fields.GetSignatureNames();
-            String sigName = names[names.Count - 1];
-            PdfPKCS7 pkcs7 = fields.VerifySignature(sigName);
-            if (pkcs7.IsTsp)
-                v.AddVerification(sigName, ocsp, crl, LtvVerification.CertificateOption.SIGNING_CERTIFICATE, LtvVerification.Level.OCSP_CRL, LtvVerification.CertificateInclusion.NO);
-            else foreach (String name in names)
-                    v.AddVerification(name, ocsp, crl, LtvVerification.CertificateOption.WHOLE_CHAIN, LtvVerification.Level.OCSP_OPTIONAL_CRL, LtvVerification.CertificateInclusion.NO);
-            PdfSignatureAppearance sap = stp.SignatureAppearance;
-            LtvTimestamp.Timestamp(sap, tsa, null);
-        }
-
-
+        
         static int Main(string[] args)
         {
             if (args.Length == 0)
@@ -115,22 +96,25 @@ namespace PDFSigner
 
                 // Build certification path for the signing certificate
                 ICollection<Org.BouncyCastle.X509.X509Certificate> certPath = eidSignature.BuildCertPath(signingCertificate, otherCertificates);
+                Org.BouncyCastle.X509.X509Certificate bcCert = new X509CertificateParser().ReadCertificate(signingCertificate);
+                Org.BouncyCastle.X509.X509Certificate[] chain = new Org.BouncyCastle.X509.X509Certificate[1] { bcCert };
+                //ICipherParameters pk = signatureCert.GetECDsaPrivateKey();
 
                 TSAClientBouncyCastle tsaClient = new TSAClientBouncyCastle("http://tsa.belgium.be/connect");
             
                 // Read unsigned PDF document
                 using (PdfReader pdfReader = new PdfReader(SourceFile))
                 {
-
-                    string tmpSigned = Path.GetTempFileName();
-
-                    // Create output stream for signed PDF document
-                    using (FileStream outputStream = new FileStream(tmpSigned, FileMode.Create))
+                    using (FileStream outputStream = new FileStream(DestinationFile, FileMode.Create))
                     {
                         // Create PdfStamper that applies extra content to the PDF document
-                        using (PdfStamper pdfStamper = PdfStamper.CreateSignature(pdfReader, outputStream, '\0'))
+                        
+                        StampingProperties properties = new StampingProperties();
+                        properties.UseAppendMode();
+                        
+                        PdfSigner signer = new PdfSigner(pdfReader, outputStream, properties);
                         {
-                            PdfSignatureAppearance appearance = pdfStamper.SignatureAppearance;
+                            PdfSignatureAppearance appearance = signer.GetSignatureAppearance();
 
                             List<ICrlClient> crlList = new List<ICrlClient>();
                             crlList.Add(new CrlClientOnline("http://crl.eid.belgium.be/belgium2.crl"));
@@ -140,7 +124,7 @@ namespace PDFSigner
                             // Sign PDF document
                             try
                             {
-                                MakeSignature.SignDetached(appearance, eidSignature, certPath, crlList, null, tsaClient, 0, CryptoStandard.CADES);
+                                signer.SignDetached(eidSignature, chain, crlList, null, tsaClient, 0, PdfSigner.CryptoStandard.CADES);
                             }
                             catch (NullReferenceException e)
                             {
@@ -155,15 +139,7 @@ namespace PDFSigner
                         }
                     }
 
-                    try
-                    {
-                        AddLtv(tmpSigned, DestinationFile, null, new CrlClientOnline(), tsaClient);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e.Message);
-                        return (int)ExitCode.UnknownError;
-                    }
+        
                 }
             }
 
