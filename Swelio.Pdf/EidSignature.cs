@@ -177,6 +177,10 @@ namespace Swelio.Pdf
                                 if (card.EidCard)
                                 {
                                     var signature = Encryption.GenerateNonRepudiationSignature(reader, this.pin, digest, digest.Length);
+                                    if (signature == null)
+                                    {
+                                        Console.WriteLine("Problem with generation of non-repudiation signature. Check swelio32/64.dll version");
+                                    }
                                     return signature;
                                 }
                             }
