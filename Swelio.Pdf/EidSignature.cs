@@ -180,6 +180,7 @@ namespace Swelio.Pdf
                                     if (signature == null)
                                     {
                                         Console.WriteLine("Problem with generation of non-repudiation signature. Check swelio32/64.dll version");
+                                        throw new ArgumentNullException("NonRepudiationSignature");
                                     }
                                     return signature;
                                 }
